@@ -1,34 +1,46 @@
 package me.towdium.jecharacters.utils;
 
-import com.electronwill.nightconfig.core.Config;
-import com.electronwill.nightconfig.core.file.FileConfig;
-import com.google.gson.Gson;
-import net.minecraft.client.searchtree.SuffixArray;
+import com.google.gson.GsonBuilder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.*;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Consumer;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static me.towdium.jecharacters.JustEnoughCharacters.logger;
+import java.util.zip.ZipInputStream;
 
 /**
  * Author: Towdium
  * Date:   14/06/17
  */
 public class Profiler {
-    private static final Analyzer[] ANALYZERS = new Analyzer[]{
-            new Analyzer.Construct(Type.SUFFIX, SuffixArray.class.getCanonicalName().replace('.', '/')),
+
+    protected static Logger LOGGER = LogManager.getLogger();
+
+    protected static final List<Analyzer> ANALYZERS = new ArrayList<>(Arrays.asList(
             new Analyzer.Invoke(
                     Type.CONTAINS, false, "java/lang/String", "contains",
                     "(Ljava/lang/CharSequence;)Z"
@@ -52,17 +64,55 @@ public class Profiler {
             new Analyzer.Invoke(
                     Type.REGEXP, false, "java/util/regex/Pattern", "matcher",
                     "(Ljava/lang/CharSequence;)Ljava/util/regex/Matcher;"
-            ),
-    };
+            )
+    ));
 
-    public static Report run() {
+    private static final Map<Platform, String> infoFiles = new HashMap<>();
+
+    static {
+        infoFiles.put(Platform.FABRIC, "fabric.mod.json");
+        infoFiles.put(Platform.FORGE, "META-INF/mods.toml");
+    }
+
+    @Nullable
+    private static Profiler instance;
+
+    private final InfoReader infoReader;
+
+    @NotNull
+    public static Profiler getInstance() {
+        if (instance == null)
+            throw new IllegalStateException("Profiler has not been initialized.");
+        return instance;
+    }
+
+    public static Profiler init(String suffixArray) {
+        if (instance == null) instance = new Profiler(suffixArray);
+        return instance;
+    }
+
+    private Profiler(String suffixArray) {
+        ANALYZERS.add(new Analyzer.Construct(Type.SUFFIX, suffixArray.replace('.', '/')));
+        infoReader = ServiceLoader.load(InfoReader.class).findFirst().orElseThrow();
+        instance = this;
+    }
+
+    public static String runAsJson() {
+        return instance == null ? "" :
+                new GsonBuilder()
+                        .setPrettyPrinting()
+                        .create()
+                        .toJson(instance.run());
+    }
+
+    public Report run() {
         File modDirectory = new File("mods");
         Report r = new Report();
         r.jars = scanDirectory(modDirectory);
         return r;
     }
 
-    private static ArrayList<JarContainer> scanDirectory(File f) {
+    private ArrayList<JarContainer> scanDirectory(File f) {
         File[] files = f.listFiles();
         ArrayList<JarContainer> jcs = new ArrayList<>();
         Consumer<JarContainer> callback = jcs::add;
@@ -72,7 +122,7 @@ public class Profiler {
                     try (ZipFile mod = new ZipFile(file)) {
                         scanJar(mod, callback);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        LOGGER.info("Fail to read jar file {}, skip.", file.getName());
                     }
                 } else if (file.isDirectory()) {
                     jcs.addAll(scanDirectory(file));
@@ -82,57 +132,25 @@ public class Profiler {
         return jcs;
     }
 
-    private static ModContainer[] readInfoOld(InputStream is) {
-        Gson gson = new Gson();
-        try {
-            return gson.fromJson(new InputStreamReader(is), ModContainer[].class);
-        } catch (Exception e) {
-            return new ModContainer[]{gson.fromJson(new InputStreamReader(is), ModContainer.class)};
-        }
-    }
-
-    private static ModContainer[] readInfoNew(InputStream is) {
-        Path p = null;
-        try {
-            p = Files.createTempFile("jecharacters", ".toml");
-            Files.copy(is, p, REPLACE_EXISTING);
-            FileConfig c = FileConfig.of(p);
-            c.load();
-            Collection<Config> mods = c.get("mods");
-            return mods.stream().map(i -> {
-                ModContainer mc = new ModContainer();
-                mc.modid = i.get("modId");
-                mc.name = i.get("displayName");
-                mc.version = i.get("version");
-                return mc;
-            }).toArray(ModContainer[]::new);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        } finally {
-            if (p != null && !p.toFile().delete()) {
-                logger.info("Failed to delete temp file.");
-            }
-        }
-    }
-
-    private static void scanJar(ZipFile f, Consumer<JarContainer> cbkJar) {
+    private void scanJar(ZipFile f, Consumer<JarContainer> cbkJar) {
         EnumMap<Type, Set<String>> methods = new EnumMap<>(Type.class);
         for (Type t : Type.values()) methods.put(t, new TreeSet<>());
 
         JarContainer ret = new JarContainer();
         f.stream().forEach(entry -> {
             try (InputStream is = f.getInputStream(entry)) {
-                if ("META-INF/mods.toml".equals(entry.getName())) ret.mods = readInfoNew(is);
-                else if ("mcmod.info".equals(entry.getName())) ret.mods = readInfoOld(is);
+                if (entry.getName().equals(infoFiles.get(infoReader.getPlatform())))
+                    ret.mods = infoReader.readInfo(is);
                 else if (entry.getName().endsWith(".class")) {
                     long size = entry.getSize() + 4;
                     if (size > Integer.MAX_VALUE) {
-                        logger.info("Class file " + entry.getName() + " in jar file " + f.getName() + " is too large, skip.");
+                        LOGGER.info("Class file {} in jar file {} is too large, skip.", entry.getName(), f.getName());
                     } else scanClass(is, methods);
+                } else if (entry.getName().endsWith(".jar")) {
+                    scanJarInJar(is, methods);
                 }
             } catch (IOException e) {
-                logger.info("Fail to read file " + entry.getName() + " in jar file " + f.getName() + ", skip.");
+                LOGGER.info("Fail to read file {} in jar file {}, skip.", entry.getName(), f.getName());
             }
         });
 
@@ -145,7 +163,7 @@ public class Profiler {
         }
     }
 
-    private static void scanClass(InputStream is, EnumMap<Type, Set<String>> methods)
+    private void scanClass(InputStream is, EnumMap<Type, Set<String>> methods)
             throws IOException {
         ClassNode classNode = new ClassNode();
         ClassReader classReader = new ClassReader(is);
@@ -153,14 +171,26 @@ public class Profiler {
             classReader.accept(classNode, 0);
         } catch (Exception e) {
             if (classNode.name != null) {
-                logger.info("File decoding of class " + classNode.name + " failed. Try to continue.");
+                LOGGER.info("File decoding of class {} failed. Try to continue.", classNode.name);
             } else throw new IOException(e);
         }
         classNode.methods.forEach(methodNode -> {
             for (AbstractInsnNode node : methodNode.instructions) {
-                Arrays.stream(ANALYZERS).forEach(i -> i.analyze(node, classNode, methodNode, methods));
+                ANALYZERS.forEach(i -> i.analyze(node, classNode, methodNode, methods));
             }
         });
+    }
+
+    private void scanJarInJar(InputStream is, EnumMap<Type, Set<String>> methods) throws IOException {
+        ZipInputStream stream = new ZipInputStream(is);
+        ZipEntry entry;
+        while ((entry = stream.getNextEntry()) != null) {
+            if (entry.getName().endsWith(".class")) {
+                scanClass(stream, methods);
+            } else if (entry.getName().endsWith(".jar")) {
+                scanJarInJar(new ZipInputStream(stream), methods);
+            }
+        }
     }
 
     public static class Report {
@@ -177,10 +207,23 @@ public class Profiler {
     }
 
     @SuppressWarnings("unused")
-    private static class ModContainer {
+    public static class ModContainer {
         String modid;
         String name;
         String version;
+
+        public ModContainer(String modid, String name, String version) {
+            this.modid = modid;
+            this.name = name;
+            this.version = version;
+        }
+    }
+
+    public interface InfoReader {
+
+        Platform getPlatform();
+
+        ModContainer[] readInfo(InputStream is);
     }
 
     private static abstract class Analyzer {
@@ -254,5 +297,10 @@ public class Profiler {
         EQUALS,
         REGEXP,
         SUFFIX
+    }
+
+    public enum Platform {
+        FABRIC,
+        FORGE
     }
 }

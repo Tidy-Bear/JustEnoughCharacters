@@ -1,0 +1,38 @@
+plugins {
+    id 'net.neoforged.moddev'
+    id 'java-library'
+    id 'idea'
+}
+
+neoForge {
+    neoFormVersion = neo_form_version
+
+    runs {
+        client {
+            client()
+        }
+    }
+
+    parchment {
+        minecraftVersion = parchment_minecraft_version
+        mappingsVersion = parchment_mappings_version
+    }
+}
+
+
+dependencies {
+    implementation "com.github.towdium:PinIn:${verpinin}"
+    implementation 'org.ow2.asm:asm:9.6'
+    implementation 'org.ow2.asm:asm-tree:9.6'
+    compileOnly "mezz.jei:jei-${minecraft_version}-api:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-common:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-core:${jei_version}"
+    compileOnly "mezz.jei:jei-${minecraft_version}-gui:${jei_version}"
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

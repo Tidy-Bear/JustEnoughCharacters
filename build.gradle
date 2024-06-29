@@ -1,83 +1,19 @@
 plugins {
-    id 'idea'
-    id "dev.architectury.loom" version "1.1-SNAPSHOT"
+    id 'fabric-loom' version '1.7-SNAPSHOT' apply false
+    id 'net.neoforged.moddev' version '0.1.112' apply false
 }
 
-version = "${mc_version}-${verspec}.${verbuild}"
-group = "me.towdium.jecharacters"
-archivesBaseName = "jecharacters"
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
-
-repositories {
-    mavenCentral()
-    maven { url = 'https://jitpack.io' }
-    maven { url = "https://dvs1.progwml6.com/files/maven/" }
-    maven { url = "https://maven.blamejared.com/" }
-    maven { url = "https://modmaven.dev" }
-    maven { url = 'https://maven.parchmentmc.org' }
-}
-
-configurations {
-    shade
-    implementation.extendsFrom shade
-}
-
-loom {
-    silentMojangMappingsLicense()
-}
-
-
-dependencies {
-
-    mappings loom.layered() {
-        officialMojangMappings()
-        parchment("org.parchmentmc.data:parchment-1.20.1:2023.06.26@zip")
+subprojects {Project subproject ->
+    repositories {
+        mavenCentral()
+        maven { url = 'https://jitpack.io' }
+        maven { url = "https://dvs1.progwml6.com/files/maven/" }
+        maven { url = "https://maven.blamejared.com/" }
+        maven { url = "https://modmaven.dev" }
+        maven { url = 'https://maven.parchmentmc.org' }
     }
 
-    minecraft "com.mojang:minecraft:${project.mc_version}"
-    forge "net.minecraftforge:forge:${project.forge_version}"
-    modImplementation 'mezz.jei:jei-1.20.1-forge:15.2.0.22'
-    implementation "com.github.towdium:PinIn:${verpinin}"
-    forgeRuntimeLibrary "com.github.towdium:PinIn:${verpinin}"
-    include(group: 'com.github.towdium', name: 'PinIn', version: "${verpinin}") {
-        transitive = false
-    }
-}
-
-test {
-    useJUnitPlatform()
-}
-
-tasks.named('jar', Jar).configure {
-    manifest {
-        attributes([
-                "Specification-Title"     : 'Just Enough Characters',
-                "Specification-Vendor"    : 'Towdium',
-                "Specification-Version"   : "${verspec}",
-                "Implementation-Title"    : project.name,
-                "Implementation-Version"  : "${verspec}.${verbuild}",
-                "Implementation-Vendor"   : 'Towdium',
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        ])
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-}
-
-task generate(type: Exec) {
-    commandLine 'python', 'generate.py'
-}
-
-compileJava.dependsOn generate
-
-processResources {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    inputs.property "version", project.version
-
-    filesMatching("META-INF/mods.toml") {
-        expand "version": project.version
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
     }
 }

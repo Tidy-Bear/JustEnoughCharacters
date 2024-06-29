@@ -14,7 +14,7 @@ import java.util.function.Predicate;
 
 import static net.minecraftforge.fml.config.ModConfig.Type.COMMON;
 
-public class JechConfig {
+public class JechConfigForge {
     public static final String PATH = "jecharacters.toml";
     public static ForgeConfigSpec common;
 
@@ -70,7 +70,7 @@ public class JechConfig {
     }
 
     static void register() {
-        ModLoadingContext.get().registerConfig(COMMON, JechConfig.common,
+        ModLoadingContext.get().registerConfig(COMMON, JechConfigForge.common,
                 FMLPaths.CONFIGDIR.get().resolve(PATH).toString());
     }
 
