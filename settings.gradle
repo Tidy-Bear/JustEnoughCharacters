@@ -7,18 +7,19 @@ pluginManagement {
     }
 }
 
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
-}
-
 buildscript {
     repositories {
         mavenCentral()
     }
     dependencies {
         classpath 'org.yaml:snakeyaml:2.0'
-        classpath 'com.google.code.gson:gson:2.10'
+        classpath 'com.google.code.gson:gson:2.10.1'
     }
 }
 
-include('common', 'fabric', 'neoforge')
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
+include('common', 'fabric', 'neoforge', 'coremod-common', 'coremod-neoforge')
+rootProject.name = "JustEnoughCharacters"

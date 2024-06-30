@@ -1,0 +1,13 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    compileOnly 'org.ow2.asm:asm:9.6'
+    compileOnly 'org.ow2.asm:asm-tree:9.6'
+    compileOnly 'com.google.code.gson:gson:2.10.1'
+    compileOnly 'org.apache.logging.log4j:log4j-api:2.19.0'
+    compileOnly 'org.jetbrains:annotations:24.1.0'
+    compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
+    annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
+}

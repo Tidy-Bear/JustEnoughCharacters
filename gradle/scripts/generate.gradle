@@ -1,0 +1,71 @@
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import org.yaml.snakeyaml.Yaml
+
+def targetsJson = project.file("build/resources/main/me/towdium/jecharacters/targets.json")
+
+project.tasks.register("generateTargetsJson") {
+    def dataFile = project.rootProject.file("generate.yaml")
+    def mapping = project.rootProject.file("mapping.yaml")
+    Yaml yaml = new Yaml()
+    Map<String, Set<String>> all = new HashMap<>()
+    Map<String, String> mappings = yaml.load(mapping.text) as Map<String, String>
+    if (!dataFile.exists()) return
+    Map<String, List<String>> list = yaml.load(dataFile.text) as Map<String, List<String>>
+    try {
+        list.entrySet().each { entry ->
+            def checked = entry.value.findAll { checkTargetFormat(it) }
+            all.computeIfAbsent(entry.key, k -> new TreeSet<>()).addAll(checked)
+        }
+    } catch (Exception e) {
+        throw new IllegalArgumentException("Invalid config from file: ${dataFile.name}, ${e.message}")
+    }
+    boolean isFabric = project.name.contains("fabric")
+    JsonObject json = new JsonObject()
+    all.each { key, value ->
+        JsonArray array = new JsonArray()
+        for (target in value) {
+            def remap = target
+            mappings.entrySet().forEach {
+                if (target.contains(it.key)) {
+                    if (isFabric) {
+                        remap = target.replace(it.key, mappings.getOrDefault(it.key, it.key))
+                    }
+                }
+            }
+            if (isFabric && containsNeoFluidStack(remap)) continue
+            array.add(remap)
+        }
+        JsonObject inner = new JsonObject()
+        inner.add("default", array)
+        inner.add("additional", new JsonArray())
+        json.add(key, inner)
+    }
+    json.add("removals", new JsonArray())
+    json.add("suffixClassName", new JsonPrimitive(project.suffixClassName))
+    String jsonStr = new GsonBuilder().setPrettyPrinting().create().toJson(json)
+    if (!targetsJson.exists()) {
+        targetsJson.parentFile.mkdirs()
+        targetsJson.createNewFile()
+    }
+    targetsJson.write(jsonStr)
+}
+project.jar {
+    dependsOn "generateTargetsJson"
+}
+
+static boolean checkTargetFormat(String target) {
+    String[] split = target.split(':')
+    if (split.length != 2)
+        throw new IllegalArgumentException("Invalid target: \"${target}\", must be in format 'namespace:name'")
+    split.each { s ->
+        if (s.contains(" "))
+            throw new IllegalArgumentException("Invalid target: \"${target}\", spaces are not allowed")
+    }
+}
+
+static boolean containsNeoFluidStack(String s) {
+    return s.contains("Lnet/neoforged/neoforge/fluids/FluidStack")
+}

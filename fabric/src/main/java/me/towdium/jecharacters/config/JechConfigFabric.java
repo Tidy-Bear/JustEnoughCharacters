@@ -65,18 +65,21 @@ public class JechConfigFabric {
         JechConfig.enumKeyboard = enumKeyboard;
         config.setValue(GENERAL, "EnumKeyboard", enumKeyboard.name());
         config.save();
+        refresh();
     }
 
     public static void setEnableQuote(boolean enableQuote) {
         JechConfig.enableQuote = enableQuote;
         config.setValue(GENERAL, "EnableQuote", enableQuote);
         config.save();
+        refresh();
     }
 
     public static void setEnableVerbose(boolean enableVerbose) {
         JechConfig.enableVerbose = enableVerbose;
         config.setValue(UTILITIES, "EnableVerbose", enableVerbose);
         config.save();
+        refresh();
     }
 
 }

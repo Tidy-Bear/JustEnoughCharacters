@@ -71,7 +71,7 @@ public class Profiler {
 
     static {
         infoFiles.put(Platform.FABRIC, "fabric.mod.json");
-        infoFiles.put(Platform.FORGE, "META-INF/mods.toml");
+        infoFiles.put(Platform.NEOFORGE, "META-INF/neoforge.mods.toml");
     }
 
     @Nullable
@@ -301,6 +301,6 @@ public class Profiler {
 
     public enum Platform {
         FABRIC,
-        FORGE
+        NEOFORGE
     }
 }

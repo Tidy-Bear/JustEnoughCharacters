@@ -1,23 +1,22 @@
-package me.towdium.jecharacters.mixin;
+package me.towdium.jecharacters.coremod;
 
-import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import me.towdium.jecharacters.asm.Transformer;
+import cpw.mods.modlauncher.api.ITransformer;
+import cpw.mods.modlauncher.api.ITransformerVotingContext;
+import cpw.mods.modlauncher.api.TargetType;
+import cpw.mods.modlauncher.api.TransformerVoteResult;
 import me.towdium.jecharacters.asm.JechClassTransformer;
-import net.fabricmc.loader.api.FabricLoader;
+import me.towdium.jecharacters.asm.Transformer;
+import net.neoforged.fml.loading.FMLPaths;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.tree.ClassNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
-import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
-import org.spongepowered.asm.mixin.transformer.IMixinTransformer;
-import org.spongepowered.asm.transformers.TreeTransformer;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -26,52 +25,29 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.ServiceLoader.Provider;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * Based on SpASM
- */
-public class JechMixinPlugin implements IMixinConfigPlugin {
+public class WrapperTransformer implements ITransformer<ClassNode> {
 
-    static final ImmutableList<Transformer> TRANSFORMERS = entrypoint("transformer", Transformer.class);
-    private static final Logger log = LoggerFactory.getLogger(JechMixinPlugin.class);
+    private final static Logger log = LogManager.getLogger("JechTransformer");
 
-    public JechMixinPlugin() {
+    private final JechClassTransformer delegate;
 
-    }
-
-    static {
-        try {
-            hook();
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static <ENTRYPOINT> ImmutableList<ENTRYPOINT> entrypoint(final @NotNull String key, final @NotNull Class<ENTRYPOINT> entrypointClass) {
-        return ImmutableList.copyOf(FabricLoader.getInstance().getEntrypoints("jech:" + key, entrypointClass));
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T extends TreeTransformer & IMixinTransformer> void hook() throws NoSuchFieldException, IllegalAccessException {
-        ClassLoader knotClassLoader = JechMixinPlugin.class.getClassLoader();
-        Field knotClassDelegateField = knotClassLoader.getClass().getDeclaredField("delegate");
-        knotClassDelegateField.setAccessible(true);
-        Object knotClassDelegate = knotClassDelegateField.get(knotClassLoader);
-        Field mixinTransformerField = knotClassDelegate.getClass().getDeclaredField("mixinTransformer");
-        mixinTransformerField.setAccessible(true);
+    public WrapperTransformer() {
         InputStream is = JechClassTransformer.class.getClassLoader().getResourceAsStream("me/towdium/jecharacters/targets.json");
         if (is == null) {
             throw new RuntimeException("Could not find targets.json. JechTransformer will not be loaded.");
         }
         JsonObject targets = JsonParser.parseReader(new InputStreamReader(is, StandardCharsets.UTF_8)).getAsJsonObject();
-
-        File configDataFile = FabricLoader.getInstance().getConfigDir().resolve("jecharacters-extra.json").toFile();
+        ModuleLayer layer = WrapperTransformer.class.getModule().getLayer();
+        var transformers = ServiceLoader.load(layer, Transformer.class).stream().map(Provider::get).toList();
+        File configDataFile = FMLPaths.CONFIGDIR.get().resolve("jecharacters-extra.json").toFile();
         if (!configDataFile.exists()) {
             JsonObject template = new JsonObject();
             template.add("removals", new JsonArray());
@@ -111,8 +87,7 @@ public class JechMixinPlugin implements IMixinConfigPlugin {
                 log.error("Could not read config file", e);
             }
         }
-
-        mixinTransformerField.set(knotClassDelegate, new MixinTransformerHook<>((T) mixinTransformerField.get(knotClassDelegate), new JechClassTransformer(TRANSFORMERS, targets)));
+        delegate = new JechClassTransformer(transformers, targets);
     }
 
     private static JsonObject withDefaults() {
@@ -122,33 +97,26 @@ public class JechMixinPlugin implements IMixinConfigPlugin {
     }
 
     @Override
-    public void onLoad(String mixinPackage) {
+    public @NotNull ClassNode transform(ClassNode input, ITransformerVotingContext context) {
+        delegate.transform(input);
+        return input;
     }
 
     @Override
-    public String getRefMapperConfig() {
-        return null;
+    public @NotNull TransformerVoteResult castVote(ITransformerVotingContext context) {
+        return TransformerVoteResult.YES;
     }
 
     @Override
-    public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return true;
+    public @NotNull Set<Target<ClassNode>> targets() {
+        return delegate.getTransformers()
+                .stream()
+                .flatMap(transformer -> transformer.targetClasses().stream().map(Target::targetClass))
+                .collect(Collectors.toSet());
     }
 
     @Override
-    public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {
-    }
-
-    @Override
-    public List<String> getMixins() {
-        return null;
-    }
-
-    @Override
-    public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-    }
-
-    @Override
-    public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+    public @NotNull TargetType<ClassNode> getTargetType() {
+        return TargetType.CLASS;
     }
 }
