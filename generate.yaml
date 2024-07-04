@@ -1,5 +1,7 @@
 "suffix": [
   "dev.emi.emi.search.EmiSearch:bake()V", #EMI Search
+  "net.minecraft.client.searchtree.SearchTree:plainText(Ljava/util/List;Ljava/util/function/Function;)Lnet/minecraft/client/searchtree/SearchTree;",
+  "net.minecraft.class_1129:plainText(Ljava/util/List;Ljava/util/function/Function;)Lnet/minecraft/class_1129;",
 ]
 "contains": [
   "net.blay09.mods.farmingforblockheads.container.MarketClientContainer:applyFilters()V", #Farming for Blockheads
