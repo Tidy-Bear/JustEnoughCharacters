@@ -116,5 +116,9 @@
   'org.cyclops.integratedterminals.capability.ingredient.IngredientComponentTerminalStorageHandlerItemStack:lambda$getInstanceFilterPredicate$2(Ljava/lang/String;Lnet/minecraft/network/chat/Component;)Z', #Integrated Terminals(since 1.19.2-1.4.10)
   'org.cyclops.integratedterminals.capability.ingredient.IngredientComponentTerminalStorageHandlerFluidStack:lambda$getInstanceFilterPredicate$14(Ljava/lang/String;Lnet/minecraftforge/fluids/FluidStack;)Z', #Integrated Terminals(since 1.19.2-1.4.10)
   'org.cyclops.integratedterminals.capability.ingredient.IngredientComponentTerminalStorageHandlerFluidStack:lambda$getInstanceFilterPredicate$8(Ljava/lang/String;Lnet/minecraftforge/fluids/FluidStack;)Z', #Integrated Terminals(since 1.19.2-1.4.10)
-  'ml.pkom.itemalchemy.gui.screen.AlchemyTableScreenHandler:sortBySearch()V' #ItemAlchemy(since 0.7.6)
+  'ml.pkom.itemalchemy.gui.screen.AlchemyTableScreenHandler:sortBySearch()V', #ItemAlchemy(since 0.7.6)
+  'org.cyclops.integratedterminals.capability.ingredient.IngredientComponentTerminalStorageHandlerItemStack:lambda$getInstanceFilterPredicate$1(Ljava/lang/String;Lnet/minecraft/item/ItemStack;)Z', #Integrated Terminals(since 1.16.5-1.2.13)
+  'org.cyclops.integratedterminals.capability.ingredient.IngredientComponentTerminalStorageHandlerItemStack:lambda$getInstanceFilterPredicate$7(Ljava/lang/String;Lnet/minecraft/item/ItemStack;)Z', #Integrated Terminals(since 1.16.5-1.2.13)
+  'org.cyclops.integratedterminals.capability.ingredient.IngredientComponentTerminalStorageHandlerFluidStack:lambda$getInstanceFilterPredicate$13(Ljava/lang/String;Lnet/minecraftforge/fluids/FluidStack;)Z', #Integrated Terminals(since 1.16.5-1.2.13)
+  'org.cyclops.integratedterminals.capability.ingredient.IngredientComponentTerminalStorageHandlerFluidStack:lambda$getInstanceFilterPredicate$8(Ljava/lang/String;Lnet/minecraftforge/fluids/FluidStack;)Z', #Integrated Terminals(since 1.16.5-1.2.13)
 ]
