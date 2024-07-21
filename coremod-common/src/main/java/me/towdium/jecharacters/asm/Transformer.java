@@ -51,19 +51,17 @@ public interface Transformer {
     ) {
 
         for (AbstractInsnNode node : methodNode.instructions) {
-            if (node instanceof MethodInsnNode && (node.getOpcode() == Opcodes.INVOKEVIRTUAL ||
+            if (node instanceof MethodInsnNode methodInsn && (node.getOpcode() == Opcodes.INVOKEVIRTUAL ||
                     node.getOpcode() == Opcodes.INVOKESPECIAL || node.getOpcode() == Opcodes.INVOKESTATIC)) {
-                MethodInsnNode methodInsn = ((MethodInsnNode) node);
                 if (methodInsn.owner.equals(srcOwner) && methodInsn.name.equals(srcName) && methodInsn.desc.equals(srcDesc)) {
                     methodInsn.setOpcode(Opcodes.INVOKESTATIC);
                     methodInsn.owner = dstOwner;
                     methodInsn.name = dstName;
                     methodInsn.desc = dstDesc;
                 }
-            } else if (node instanceof InvokeDynamicInsnNode && node.getOpcode() == Opcodes.INVOKEDYNAMIC) {
-                InvokeDynamicInsnNode insnNode = ((InvokeDynamicInsnNode) node);
-                if (insnNode.bsmArgs[1] instanceof Handle) {
-                    Handle h = ((Handle) insnNode.bsmArgs[1]);
+            } else if (node instanceof InvokeDynamicInsnNode insnNode && node.getOpcode() == Opcodes.INVOKEDYNAMIC) {
+                var bsmArgs = insnNode.bsmArgs;
+                if (bsmArgs.length >= 2 && insnNode.bsmArgs[1] instanceof Handle h) {
                     if (srcOwner.equals(h.getOwner()) && srcName.equals(h.getName()) && srcDesc.equals(h.getDesc()))
                         insnNode.bsmArgs[1] = new Handle(Opcodes.H_INVOKESTATIC, dstOwner, dstName, dstDesc, false);
                 }
@@ -78,10 +76,9 @@ public interface Transformer {
         boolean ret = false;
         for (AbstractInsnNode node : method.instructions) {
             int op = node.getOpcode();
-            if (node instanceof InvokeDynamicInsnNode && op == Opcodes.INVOKEDYNAMIC) {
-                InvokeDynamicInsnNode insnNode = ((InvokeDynamicInsnNode) node);
-                if (insnNode.bsmArgs[1] instanceof Handle) {
-                    Handle h = ((Handle) insnNode.bsmArgs[1]);
+            if (node instanceof InvokeDynamicInsnNode insnNode && op == Opcodes.INVOKEDYNAMIC) {
+                var bsmArgs = insnNode.bsmArgs;
+                if (bsmArgs.length >= 2 && insnNode.bsmArgs[1] instanceof Handle h) {
                     if (!(!h.getOwner().equals(owner) || !h.getName().equals(name) || !h.getDesc().equals(desc))) {
                         insnNode.bsmArgs[1] = new Handle(h.getTag(), newOwner, newName, newDesc, h.isInterface());
                         ret = true;
