@@ -7,6 +7,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 public class ModConfigImpl {
 
+    private static boolean loaded = false;
+
     public static void register() {
         JechConfigForge.register();
         FMLJavaModLoadingContext.get()
@@ -15,13 +17,15 @@ public class ModConfigImpl {
     }
 
     @SubscribeEvent
-    public static void onReload(ModConfigEvent event){
+    public static void onReload(ModConfigEvent event) {
         if (event.getConfig().getSpec() == JechConfigForge.common) {
+            loaded = true;
             JechConfigForge.reload();
         }
     }
 
     public static void reload() {
+        if (!loaded) return;
         JechConfigForge.reload();
     }
 

@@ -6,6 +6,7 @@ import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
 
+import static net.minecraftforge.fml.config.ModConfig.Type.CLIENT;
 import static net.minecraftforge.fml.config.ModConfig.Type.COMMON;
 
 public class JechConfigForge {
@@ -61,7 +62,7 @@ public class JechConfigForge {
     }
 
     public static void register() {
-        ModLoadingContext.get().registerConfig(COMMON, JechConfigForge.common, FMLPaths.CONFIGDIR.get().resolve(PATH).toString());
+        ModLoadingContext.get().registerConfig(CLIENT, JechConfigForge.common, FMLPaths.CONFIGDIR.get().resolve(PATH).toString());
     }
 
     public static void reload() {
