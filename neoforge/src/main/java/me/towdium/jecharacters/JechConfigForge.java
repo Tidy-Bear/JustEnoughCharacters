@@ -2,6 +2,7 @@ package me.towdium.jecharacters;
 
 import me.towdium.jecharacters.config.JechConfig;
 import me.towdium.jecharacters.config.JechConfig.Spell;
+import me.towdium.jecharacters.utils.Match;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.event.config.ModConfigEvent;
@@ -82,5 +83,6 @@ public class JechConfigForge {
         JechConfig.enableFU2v = enableFU2v.get();
         JechConfig.enableVerbose = enableVerbose.get();
         JechConfig.enableChat = enableChat.get();
+        Match.onConfigChange();
     }
 }

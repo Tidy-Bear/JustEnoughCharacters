@@ -55,6 +55,8 @@ java {
 
 apply from: "$rootDir/gradle/scripts/generate.gradle"
 
+jar.dependsOn(generateTargetsJson)
+
 idea {
     module {
         downloadSources = true
